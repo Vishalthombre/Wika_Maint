@@ -1,0 +1,85 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css');
+
+body.bg-dashboard {
+  background: linear-gradient(135deg, #f1f5f9, #e3f2fd);
+  font-family: 'Segoe UI', sans-serif;
+  overflow-x: hidden;
+}
+
+.form-section, .ticket-history {
+  border-radius: 16px;
+  transition: all 0.3s ease-in-out;
+}
+
+.ticket-history {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.btn-outline-primary {
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+/* Slide-in Panel */
+.ticket-popup {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: 100%;
+  max-width: 360px;
+  height: 100%;
+  background-color: white;
+  z-index: 1050;
+  transition: right 0.4s ease-in-out;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.ticket-popup.show {
+  right: 0;
+}
+
+.btn-close {
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  border: none;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  line-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close:hover {
+  background-color: #c82333;
+}
+
+/* Mobile responsive tweaks */
+@media (max-width: 768px) {
+  .form-section, .ticket-history {
+    padding: 16px;
+  }
+
+  .ticket-popup {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  .table th, .table td {
+    font-size: 13px;
+  }
+}

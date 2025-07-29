@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/admin.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <%- include('partials/navbar', { user: user }) %>
+
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="text-primary">📊 Admin Dashboard</h2>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mb-4">
+      <a href="/dashboard/user" class="btn btn-outline-primary me-2">🎫 Raise Ticket</a>
+      <a href="/dashboard/planner" class="btn btn-outline-success me-2">📋 Planner Dashboard</a>
+      <a href="/dashboard/technician" class="btn btn-outline-warning me-2">🛠 Technician Dashboard</a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card shadow-sm text-center">
+          <div class="card-body">
+            <h5>Total Tickets</h5>
+            <h3><%= summary.total %></h3>
+          </div>
+        </div>
+      </div>
+      <% Object.entries(summary.statusCounts).forEach(([status, count]) => { %>
+        <div class="col-md-3">
+          <div class="card shadow-sm text-center">
+            <div class="card-body">
+              <h6><%= status %></h6>
+              <h4><%= count %></h4>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <canvas id="statusPieChart"></canvas>
+      </div>
+      <div class="col-md-6">
+        <canvas id="categoryBarChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Ticket Table -->
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover table-sm">
+        <thead class="table-light text-center">
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Keyword</th>
+            <th>Building</th>
+            <th>Area Code</th>
+            <th>Sub Area</th>
+            <th>Description</th>
+            <th>Assigned To</th>
+            <th>Completion Note</th>
+            <th>Created At</th>
+          </tr>
+        </thead>
+        <tbody class="text-center">
+          <% tickets.forEach(ticket => { %>
+            <tr>
+              <td><%= ticket.id %></td>
+              <td><%= ticket.category %></td>
+              <td><%= ticket.status %></td>
+              <td><%= ticket.keyword || '-' %></td>
+              <td><%= ticket.building_no || '-' %></td>
+              <td><%= ticket.area_code || '-' %></td>
+              <td><%= ticket.sub_area || '-' %></td>
+              <td><%= ticket.description %></td>
+              <td><%= ticket.assigned_to_name || 'Unassigned' %></td>
+              <td><%= ticket.completion_note || '-' %></td>
+              <td><%= new Date(ticket.created_at).toLocaleString() %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  const statusCounts = <%- JSON.stringify(summary.statusCounts) %>;
+  const categoryCounts = <%- JSON.stringify(summary.categoryCounts) %>;
+
+  const statusPieChart = new Chart(document.getElementById("statusPieChart"), {
+    type: "pie",
+    data: {
+      labels: Object.keys(statusCounts),
+      datasets: [{
+        label: "Tickets by Status",
+        data: Object.values(statusCounts),
+        backgroundColor: ["#ffc107", "#0d6efd", "#198754", "#dc3545"]
+      }]
+    }
+  });
+
+  const categoryBarChart = new Chart(document.getElementById("categoryBarChart"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(categoryCounts),
+      datasets: [{
+        label: "Tickets by Category",
+        data: Object.values(categoryCounts),
+        backgroundColor: "#0d6efd"
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
