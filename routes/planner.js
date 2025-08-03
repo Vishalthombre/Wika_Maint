@@ -3,13 +3,11 @@ const router = express.Router();
 const db = require('../db');
 const requireRole = require('../middleware/requireRole');
 
-
 // ===============================
 // GET: Planner Dashboard
 // ===============================
 router.get('/dashboard/planner', requireRole(['planner', 'admin']), async (req, res) => {
   try {
-    // Fetch all tickets
     const [tickets] = await db.query(`
       SELECT 
         t.*, 
@@ -19,7 +17,6 @@ router.get('/dashboard/planner', requireRole(['planner', 'admin']), async (req, 
       ORDER BY t.created_at DESC
     `);
 
-    // Fetch all assignable users: technician, planner, admin
     const [technicians] = await db.query(`
       SELECT global_id, name 
       FROM users 
@@ -28,7 +25,7 @@ router.get('/dashboard/planner', requireRole(['planner', 'admin']), async (req, 
 
     res.render('dashboard-planner', {
       tickets,
-      technicians, // updated: can include planner or admin too
+      technicians,
       user: req.session.user
     });
 

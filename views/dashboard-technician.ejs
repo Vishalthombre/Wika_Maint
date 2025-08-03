@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/css/executer.css" />
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#007bff"/>
-  <link rel="apple-touch-icon" href="/images/logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/image-180x180.jpg">
 </head>
 <body class="bg-light">
 <%- include('partials/navbar', { user: user }) %>
@@ -32,6 +32,7 @@
       <% tickets.forEach(ticket => { %>
         <div class="ticket-card shadow-sm <% if(ticket.status === 'Completed') { %>ticket-completed d-none<% } %>">
           <p><strong>ID:</strong> <%= ticket.id %></p>
+          <p><strong>Raised By:</strong> <%= ticket.raised_by || '-' %></p>
           <p><strong>Category:</strong> <%= ticket.category %></p>
           <p><strong>Keyword:</strong> <%= ticket.keyword || '-' %></p>
 

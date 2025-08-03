@@ -3,10 +3,8 @@ const router = express.Router();
 const db = require('../db');
 const requireRole = require('../middleware/requireRole');
 
-
 // ==============================
 // GET: Technician Dashboard
-// Roles allowed: technician, planner, admin
 // ==============================
 router.get('/dashboard/technician', requireRole(['technician', 'planner', 'admin']), async (req, res) => {
   const globalId = req.session.user?.globalId;
@@ -78,6 +76,5 @@ router.post('/technician/complete', requireRole(['technician', 'admin', 'planner
     res.status(500).send('Internal Server Error');
   }
 });
-
 
 module.exports = router;

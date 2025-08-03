@@ -8,7 +8,7 @@
   <link href="/css/planner.css" rel="stylesheet" />
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#007bff"/>
-  <link rel="apple-touch-icon" href="/images/logo.png">
+   <link rel="apple-touch-icon" sizes="180x180" href="/images/image-180x180.jpg">
 </head>
 <body>
   <%- include('partials/navbar', { user: user }) %>
@@ -36,6 +36,7 @@
           <% tickets.filter(t => t.status === 'Not Assigned' || !t.assigned_to_name).forEach(ticket => { %>
             <div class="ticket-box position-relative">
               <strong>ID:</strong> <%= ticket.id %><br>
+              <strong>Raised By:</strong> <%= ticket.raised_by || '-' %><br>
               <strong>Category:</strong> <%= ticket.category %><br>
               <strong>Description:</strong> <%= ticket.description %><br>
               <strong>Keyword:</strong> <%= ticket.keyword || '-' %><br>
@@ -53,6 +54,7 @@
                 </div>
                 <div class="popup-body">
                   <p><strong>ID:</strong> <%= ticket.id %></p>
+                  <p><strong>Raised By:</strong> <%= ticket.raised_by || '-' %></p>
                   <p><strong>Category:</strong> <%= ticket.category %></p>
                   <p><strong>Description:</strong> <%= ticket.description %></p>
                   <p><strong>Keyword:</strong> <%= ticket.keyword || '-' %></p>

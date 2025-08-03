@@ -1,15 +1,16 @@
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 py-2 sticky-top shadow">
   <a class="navbar-brand fw-bold fs-3">WIKA Maint</a>
 
   <div class="ms-auto">
     <% if (user) { %>
-      <div class="dropdown">
-        <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      <div class="dropdown hover-dropdown">
+        <button class="btn btn-outline-light rounded-pill px-4 dropdown-toggle" type="button"
+                id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
           <%= user.name %>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
+        <ul class="dropdown-menu dropdown-menu-end mt-2 shadow" aria-labelledby="userDropdown">
           <li>
-            <!-- Profile Modal Trigger -->
             <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#profileModal">
               👤 View Profile
             </a>
@@ -35,9 +36,7 @@
           <% } %>
 
           <li><hr class="dropdown-divider"></li>
-          <li>
-            <a class="dropdown-item text-danger" href="/logout">🚪 Logout</a>
-          </li>
+          <li><a class="dropdown-item text-danger" href="/logout">🚪 Logout</a></li>
         </ul>
       </div>
     <% } else { %>

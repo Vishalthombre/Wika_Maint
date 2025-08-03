@@ -3,7 +3,6 @@ const router = express.Router();
 const db = require('../db');
 const requireRole = require('../middleware/requireRole');
 
-
 // ✅ Middleware: Only allow admin access
 function requireAdmin(req, res, next) {
   if (!req.session.user || req.session.user.department !== 'admin') {
@@ -12,11 +11,15 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// ==============================
 // GET: Admin Dashboard
+// ==============================
 router.get('/dashboard/admin', requireAdmin, async (req, res) => {
   try {
     const [tickets] = await db.query(`
-      SELECT t.*, u.name AS assigned_to_name
+      SELECT 
+        t.*, 
+        u.name AS assigned_to_name
       FROM tickets t
       LEFT JOIN users u ON t.assigned_to = u.global_id
       ORDER BY t.created_at DESC

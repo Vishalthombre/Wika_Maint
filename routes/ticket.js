@@ -3,7 +3,6 @@ const router = express.Router();
 const db = require('../db');
 const requireRole = require('../middleware/requireRole');
 
-
 // ==============================
 // GET: User Dashboard (Raise/View Tickets)
 // Accessible by: normal_user, technician, planner, admin
@@ -41,6 +40,8 @@ router.post('/ticket/submit', async (req, res) => {
   }
 
   const globalId = req.session.user.globalId;
+  const raisedBy = req.session.user.name;  // 👈 get user name
+
   const {
     category,
     description,
@@ -58,15 +59,15 @@ router.post('/ticket/submit', async (req, res) => {
 
       await db.query(`
         INSERT INTO tickets 
-          (global_id, category, description, building_no, area_code, sub_area, keyword)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [globalId, category, description, building_no, area_code, sub_area, keyword]);
+          (global_id, raised_by, category, description, building_no, area_code, sub_area, keyword)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [globalId, raisedBy, category, description, building_no, area_code, sub_area, keyword]);
     } else {
       await db.query(`
         INSERT INTO tickets 
-          (global_id, category, description)
-        VALUES (?, ?, ?)
-      `, [globalId, category, description]);
+          (global_id, raised_by, category, description)
+        VALUES (?, ?, ?, ?)
+      `, [globalId, raisedBy, category, description]);
     }
 
     res.send("✅ Ticket submitted successfully! <a href='/dashboard/user'>Go back</a>");
