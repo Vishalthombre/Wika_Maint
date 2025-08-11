@@ -10,6 +10,7 @@ const urlsToCache = [
   "/images/android-chrome-512x512.png",
   "/js/register-sw.js",
   "/favicon.ico",
+  "/images/user_bg.jpg",
   "/manifest.json",
   "/offline.html" // 👈 Important: add this
 ];
