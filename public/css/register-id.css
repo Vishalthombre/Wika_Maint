@@ -4,7 +4,8 @@ body {
   margin: 0;
   padding: 0;
   height: 100vh;
-   background: url('/images/user_bg.jpg') no-repeat center center fixed;
+   /* background: url('/images/user_bg.jpg') no-repeat center center fixed; */
+     background-color: #aecfef !important;
   background-size: cover;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
