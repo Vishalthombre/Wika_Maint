@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>User Dashboard - Raise Ticket</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/user-dashboard.css">
+  <meta name="theme-color" content="#007bff"/>
+  <style>
+    .category-btn.active { box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15); }
+    .ticket-popup {
+      position: fixed;
+      right: 0;
+      top: 80px;
+      width: 380px;
+      max-width: 95%;
+      transform: translateX(110%);
+      transition: transform .25s ease;
+      z-index: 1050;
+      background: #fff;
+      height: calc(100vh - 100px);
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+    .ticket-popup.show {
+      transform: translateX(0);
+    }
+  </style>
+</head>
+<body class="bg-dashboard">
+
+<%- include('partials/navbar', { user: user }) %>
+
+<div class="container-fluid py-4">
+  <div class="row justify-content-center g-4">
+
+    <div class="col-12">
+      <% 
+        const serverError = (typeof error !== 'undefined') ? error : null;
+        const serverMessage = (typeof message !== 'undefined') ? message : null;
+      %>
+
+      <% if (serverError) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <strong>Error:</strong> <%= serverError %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+
+      <% if (serverMessage) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <%= serverMessage %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="col-lg-7 col-md-10">
+      <div class="form-section shadow p-4 bg-white rounded-4 animate__animated animate__fadeIn">
+        <h3 class="mb-4 text-primary">Raise Maintenance Ticket</h3>
+
+        <div class="d-flex flex-wrap gap-3 mb-4">
+          <button id="btnFacility" type="button" class="btn btn-primary flex-fill category-btn" onclick="selectCategory('Facility Service', this)">Facility Service</button>
+          <button id="btnBreakdown" type="button" class="btn btn-warning flex-fill category-btn" onclick="selectCategory('Breakdown', this)">Breakdown</button>
+          <button id="btnSafety" type="button" class="btn btn-danger flex-fill category-btn" onclick="selectCategory('Safety', this)">Safety</button>
+        </div>
+
+        <form action="/ticket/submit" method="POST" id="ticketForm" novalidate>
+          <input type="hidden" name="category" id="selectedCategory" />
+          <input type="hidden" name="location" value="<%= user.location %>" />
+
+          <div id="formAlertContainer"></div>
+
+          <div id="dynamicFields"></div>
+
+          <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" name="description" id="description" rows="3" required></textarea>
+          </div>
+
+          <div class="text-end">
+            <button type="submit" class="btn btn-primary px-4">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-5 col-md-10 position-relative">
+      <div class="ticket-history shadow p-4 bg-white rounded-4 animate__animated animate__fadeIn">
+        <h4 class="mb-3 text-center text-success">📋 My Tickets</h4>
+
+        <% if (!tickets || tickets.length === 0) { %>
+          <p class="text-muted text-center">No tickets submitted yet.</p>
+        <% } else { %>
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm text-center align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% tickets.forEach(ticket => { %>
+                  <tr>
+                    <td><%= ticket.id %></td>
+                    <td>
+                      <div><%= ticket.category || ticket.category_id || '-' %></div>
+                      <% if (ticket.building_no || ticket.area_code) { %>
+                        <small class="text-muted">
+                          <%= ticket.building_no ? ticket.building_no + ' / ' : '' %>
+                          <%= ticket.area_code ? ticket.area_code + (ticket.sub_area ? ' / ' + ticket.sub_area : '') : '' %>
+                        </small>
+                      <% } %>
+                    </td>
+                    <td><%= ticket.status || '-' %></td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-info show-ticket-details" data-ticket-id="<%= ticket.id %>">
+                        Show Details
+                      </button>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div id="ticketDetailPanel" class="ticket-popup shadow p-4 rounded-start-4" aria-live="polite" aria-atomic="true">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0 text-primary">Ticket Details</h5>
+          <button class="btn-close" onclick="closePopup()" aria-label="Close details panel"></button>
+        </div>
+        <div id="ticketDetailsContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let masterData = {};
+  let keywords = [];
+  const userLocation = "<%= user.location %>";
+
+  const currentUser = <%- JSON.stringify(user).replace(/</g, "\\u003c") %>;
+  window._tickets = <%- JSON.stringify(tickets || []).replace(/</g, "\\u003c") %>;
+
+  async function loadMasterData() {
+    try {
+      const res = await fetch('/data/masterData.json');
+      const all = await res.json();
+      masterData = all[userLocation] || all[userLocation.trim()] || {};
+      // If "Facility Service" key not present but "Facility" is, normalize:
+      if (!masterData['Facility Service'] && masterData['Facility']) {
+        masterData['Facility Service'] = masterData['Facility'];
+      }
+      console.log('masterData loaded for', userLocation, masterData);
+    } catch (err) {
+      console.warn('masterData not available or failed to load', err);
+      masterData = {};
+    }
+  }
+
+  async function loadKeywords() {
+    try {
+      const res = await fetch('/data/keywords.json');
+      keywords = await res.json();
+      console.log('keywords loaded', keywords);
+    } catch (err) {
+      console.warn('keywords not available or failed to load', err);
+      keywords = [];
+    }
+  }
+
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function setActiveButton(btn) {
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  }
+
+  function showFormAlert(message, type = 'danger') {
+    const container = document.getElementById('formAlertContainer');
+    if (!container) return;
+    container.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${escapeHtml(message)}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>`;
+  }
+
+  function buildCommonSelects({ buildingOptions = [], areaOptions = [], subAreaOptions = [], keywordOptions = [] }) {
+    return `
+      <div class="mb-3">
+        <label class="form-label">Level 1 (Building / Group)</label>
+        <select class="form-select" name="building_no" id="buildingSelect" required>
+          <option value="">Select</option>
+          ${buildingOptions.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Level 2 (Area)</label>
+        <select class="form-select" name="area_code" id="areaSelect" disabled required>
+          <option value="">Select</option>
+          ${areaOptions.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Level 3 (Sub Area)</label>
+        <select class="form-select" name="sub_area" id="subAreaSelect" disabled required>
+          <option value="">Select</option>
+          ${subAreaOptions.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Keyword</label>
+        <select class="form-select" name="keyword" id="keywordSelect" required>
+          <option value="">Select</option>
+          ${keywordOptions.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('')}
+        </select>
+      </div>
+    `;
+  }
+
+  function resolveCategoryKey(categoryLabel) {
+    if (!masterData || typeof masterData !== 'object') return categoryLabel;
+    if (masterData.hasOwnProperty(categoryLabel)) return categoryLabel;
+    const trimmed = categoryLabel.trim();
+    if (masterData.hasOwnProperty(trimmed)) return trimmed;
+    const aliases = { 'Facility Service': 'Facility', 'Facility': 'Facility Service' };
+    if (aliases[categoryLabel] && masterData.hasOwnProperty(aliases[categoryLabel])) return aliases[categoryLabel];
+    const found = Object.keys(masterData).find(k => k.toLowerCase() === categoryLabel.toLowerCase());
+    if (found) return found;
+    return categoryLabel;
+  }
+
+  function selectCategory(categoryLabel, btnElem = null) {
+    setActiveButton(btnElem);
+
+    const dataKey = resolveCategoryKey(categoryLabel);
+
+    document.getElementById('selectedCategory').value = categoryLabel;
+    const dyn = document.getElementById('dynamicFields');
+    dyn.innerHTML = '';
+
+    const catData = masterData[dataKey] || {};
+    const level1Keys = Object.keys(catData || {});
+
+    dyn.innerHTML = buildCommonSelects({
+      buildingOptions: level1Keys,
+      areaOptions: [],
+      subAreaOptions: [],
+      keywordOptions: keywords || []
+    });
+
+    const buildingSelect = document.getElementById('buildingSelect');
+    const areaSelect = document.getElementById('areaSelect');
+    const subAreaSelect = document.getElementById('subAreaSelect');
+
+    if (!buildingSelect) return;
+
+    areaSelect.disabled = true;
+    subAreaSelect.disabled = true;
+
+    buildingSelect.onchange = function () {
+      const lvl1 = this.value;
+      const lvl2 = catData && catData[lvl1];
+
+      areaSelect.innerHTML = `<option value="">Select</option>`;
+      subAreaSelect.innerHTML = `<option value="">Select</option>`;
+      areaSelect.disabled = true;
+      subAreaSelect.disabled = true;
+
+      if (Array.isArray(lvl2)) {
+        areaSelect.innerHTML += lvl2.map(i => `<option value="${escapeHtml(i)}">${escapeHtml(i)}</option>`).join('');
+        areaSelect.disabled = false;
+      } else if (lvl2 && typeof lvl2 === 'object') {
+        const areaKeys = Object.keys(lvl2 || {});
+        areaSelect.innerHTML += areaKeys.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+        areaSelect.disabled = false;
+      }
+    };
+
+    areaSelect.onchange = function () {
+      const lvl1 = buildingSelect.value;
+      const lvl2Val = this.value;
+      const lvl2Obj = catData && catData[lvl1];
+
+      subAreaSelect.innerHTML = `<option value="">Select</option>`;
+      subAreaSelect.disabled = true;
+
+      if (Array.isArray(lvl2Obj)) {
+        if (lvl2Val) {
+          subAreaSelect.innerHTML = `<option value="${escapeHtml(lvl2Val)}">${escapeHtml(lvl2Val)}</option>`;
+          subAreaSelect.disabled = false;
+        }
+      } else if (lvl2Obj && typeof lvl2Obj === 'object') {
+        const subList = lvl2Obj[lvl2Val] || [];
+        if (Array.isArray(subList) && subList.length) {
+          subAreaSelect.innerHTML += subList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+          subAreaSelect.disabled = false;
+        }
+      }
+    };
+  }
+
+  function showTicketDetails(ticket) {
+    const panel = document.getElementById('ticketDetailPanel');
+    const content = document.getElementById('ticketDetailsContent');
+
+    const details = `
+      ${ticket.building_no ? `<p><strong>Level 1:</strong> ${escapeHtml(ticket.building_no)}</p>` : ''}
+      ${ticket.area_code ? `<p><strong>Level 2:</strong> ${escapeHtml(ticket.area_code)}</p>` : ''}
+      ${ticket.sub_area ? `<p><strong>Level 3:</strong> ${escapeHtml(ticket.sub_area)}</p>` : ''}
+      ${ticket.keyword ? `<p><strong>Keyword:</strong> ${escapeHtml(ticket.keyword)}</p>` : ''}
+    `;
+
+    content.innerHTML = `
+      <p><strong>ID:</strong> ${escapeHtml(ticket.id)}</p>
+      <p><strong>Category:</strong> ${escapeHtml(ticket.category || ticket.category_id || '-')}</p>
+      ${details}
+      <p><strong>Description:</strong> ${escapeHtml(ticket.description || '-')}</p>
+      <p><strong>Status:</strong> ${escapeHtml(ticket.status || '-')}</p>
+      <p><strong>Assigned To:</strong> ${escapeHtml(ticket.assigned_to_name || ticket.assigned_to || 'Not Assigned')}</p>
+      <p><strong>Completed At:</strong> ${ticket.completed_at ? new Date(ticket.completed_at).toLocaleString() : '-'}</p>
+      <div class="mt-3">
+        <small class="text-muted">No actions available.</small>
+      </div>
+    `;
+    panel.classList.add('show');
+  }
+
+  function closePopup() {
+    document.getElementById('ticketDetailPanel').classList.remove('show');
+  }
+
+  function showTicketDetailsById(id) {
+    if (!window._tickets || !Array.isArray(window._tickets)) {
+      console.warn('Tickets data not available');
+      return;
+    }
+    const t = window._tickets.find(tt => String(tt.id) === String(id));
+    if (!t) {
+      console.warn('Ticket not found for id', id);
+      return;
+    }
+    showTicketDetails(t);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    Promise.all([loadMasterData(), loadKeywords()]).then(() => {
+      // Select Facility Service category by default
+      const btnFacility = document.getElementById('btnFacility');
+      selectCategory('Facility Service', btnFacility);
+    });
+
+    document.getElementById('ticketForm')?.addEventListener('submit', (e) => {
+      document.getElementById('formAlertContainer').innerHTML = '';
+
+      const selectedCategory = document.getElementById('selectedCategory')?.value || '';
+      if (!selectedCategory) {
+        e.preventDefault();
+        showFormAlert('Please choose a Category (click a Category button).', 'danger');
+        return;
+      }
+
+      // Simple validation example: require selects for Facility Service
+      if (selectedCategory === 'Facility Service') {
+        const b = document.getElementById('buildingSelect')?.value;
+        const a = document.getElementById('areaSelect')?.value;
+        const s = document.getElementById('subAreaSelect')?.value;
+        const k = document.getElementById('keywordSelect')?.value;
+
+        if (b === '' || a === '' || s === '' || k === '') {
+          e.preventDefault();
+          showFormAlert('Please select all levels: Building, Area, Sub Area, and Keyword.', 'danger');
+          return;
+        }
+      }
+    });
+
+    // Attach Show Details buttons click handlers
+    document.querySelectorAll('.show-ticket-details').forEach(btn => {
+      btn.addEventListener('click', (evt) => {
+        const id = evt.currentTarget.getAttribute('data-ticket-id');
+        if (id) {
+          showTicketDetailsById(id);
+        }
+      });
+    });
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
