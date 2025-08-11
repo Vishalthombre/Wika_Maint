@@ -30,6 +30,7 @@ app.use(session({
   }
 }));
 
+app.set('trust proxy', 1); // trust first proxy (if behind a reverse proxy like Nginx)
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
